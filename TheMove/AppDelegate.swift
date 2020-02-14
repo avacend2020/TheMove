@@ -8,16 +8,66 @@
 
 import UIKit
 import CoreData
-
+import FBSDKCoreKit
+import TwitterKit
+import GoogleSignIn
+import Firebase
+import UserNotifications
+import FirebaseMessaging
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate,GIDSignInDelegate { 
 
     var window: UIWindow?
-
+    
+    private var accessToken : String?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+  //      FBSDKApplicationDelegate.sharedInstance().application(application, didFinishLaunchingWithOptions: launchOptions)
+        
+//        TWTRTwitter.sharedInstance().start(withConsumerKey:"nLl1mNYc25avPPF4oIzMyQzft", consumerSecret:"Qm3e5JTXDhbbLl44cq6WdK00tSUwa17tWlO8Bf70douE4dcJe2")
+        
+        FIRApp.configure()
+        
+        if #available(iOS 10.0, *) {
+            // For iOS 10 display notification (sent via APNS)
+            UNUserNotificationCenter.current().delegate = self
+            
+            let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+            UNUserNotificationCenter.current().requestAuthorization(
+                options: authOptions,
+                completionHandler: {_, _ in })
+        } else {
+            let settings: UIUserNotificationSettings =
+                UIUserNotificationSettings(types: [.alert, .badge, .sound], categories: nil)
+            application.registerUserNotificationSettings(settings)
+        }
+        
+        application.registerForRemoteNotifications()
+        
+        
+       FIRMessaging.messaging().remoteMessageDelegate = self
+        
+        GIDSignIn.sharedInstance().clientID = "443803541018-su0v8fgl68jhnvl1udrsuc8ep7bdgcgk.apps.googleusercontent.com"
+        
+        GIDSignIn.sharedInstance().delegate = self
         return true
+    }
+    
+//    func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+//
+////        let handled: Bool = FBSDKApplicationDelegate.sharedInstance().application(application, open: url, sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String, annotation: options[UIApplication.OpenURLOptionsKey.annotation])
+////        // Add any custom logic here.
+////        return handled
+//
+//      return TWTRTwitter.sharedInstance().application(application, open: url, options: options)
+//
+//    }
+    
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        return GIDSignIn.sharedInstance().handle(url as URL?,
+                                                 sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
+                                                 annotation: options[UIApplication.OpenURLOptionsKey.annotation])
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -43,6 +93,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Saves changes in the application's managed object context before the application terminates.
         self.saveContext()
     }
+    
+    func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!,
+              withError error: Error!) {
+//        if (error == nil) {
+//            // Perform any operations on signed in user here.
+//            self.accessToken = user.authentication.accessToken
+//
+//            UserDefaults.standard.set(self.accessToken, forKey: UserAccessToken)
+//            UserDefaults.standard.synchronize()
+//
+//            let formattedToken: String = String(format: "Bearer %@", self.accessToken!)
+//            let manager = SDWebImageManager.shared().imageDownloader
+//            manager!.setValue(formattedToken, forHTTPHeaderField: "Authorization")
+//            manager!.setValue("3.0", forHTTPHeaderField: "GData-Version")
+//
+//            self.networkController = NetworkController(accessToken: self.accessToken!)
+//            loadContacts()
+//        } else {
+//            print("\(error.localizedDescription)")
+//        }
+    }
+
 
     // MARK: - Core Data stack
 
@@ -91,3 +163,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 }
 
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void)
+    {
+        completionHandler([.alert, .badge, .sound])
+    }
+    
+    
+}
+
+extension AppDelegate : FIRMessagingDelegate {
+    func applicationReceivedRemoteMessage(_ remoteMessage: FIRMessagingRemoteMessage) {
+        print("Received data message: \(remoteMessage.appData)")
+    }
+    
+    // [START refresh_token]
+    
+    func messaging(_ messaging: FIRMessaging, didReceiveRegistrationToken fcmToken: String) {
+        
+        print("Firebase registration token: \(fcmToken)")
+        
+    }}
